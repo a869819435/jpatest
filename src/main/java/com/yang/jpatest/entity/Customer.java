@@ -1,9 +1,13 @@
 package com.yang.jpatest.entity;
 
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import javax.persistence.*;
 import java.io.Serializable;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * 客户实体类
@@ -16,7 +20,8 @@ import java.io.Serializable;
  *
  * @author ywq
  */
-@Data
+@Setter
+@Getter
 @Entity  // 声明此类是一个实体类
 @Table(name = "cst_customer")  // 配置实体类和表的映射关系
 public class Customer implements Serializable {
@@ -73,4 +78,12 @@ public class Customer implements Serializable {
     @Column(name = "cust_phone")
     private String custPhone;
 
+    /**
+     * 配置客户和联系人的一对多关系
+     */
+//    @OneToMany(targetEntity = LinkMan.class)  //保留外键维护权
+//    @JoinColumn(name = "lkm_cust_id",referencedColumnName = "cust_id")
+    // 放弃外键维护权
+    @OneToMany(mappedBy = "customer",cascade = CascadeType.ALL)
+    private Set<LinkMan> linkmans = new HashSet<LinkMan>(0);
 }

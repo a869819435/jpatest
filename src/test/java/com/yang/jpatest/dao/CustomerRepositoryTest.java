@@ -1,6 +1,7 @@
 package com.yang.jpatest.dao;
 
 import com.yang.jpatest.entity.Customer;
+import com.yang.jpatest.entity.LinkMan;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -9,6 +10,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.test.annotation.Rollback;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.persistence.criteria.*;
@@ -24,6 +26,9 @@ class CustomerRepositoryTest {
 
     @Autowired
     private CustomerRepository customerDao;
+
+    @Autowired
+    private LinkManDao linkManDao;
 
     /**
      * 保存客户：调用save(obj)方法
@@ -233,5 +238,135 @@ class CustomerRepositoryTest {
         System.out.println(all.getTotalElements());
         // 得到总页数
         System.out.println(all.getTotalPages());
+    }
+
+    /**
+     * 保存一个客户，保存一个联系人(Rollback 关闭自动回滚)
+     * 实体类采用双向关联(可能会多出一条无用update语句)
+     */
+    @Test
+    @Transactional(rollbackFor = Exception.class)
+    @Rollback(value = false)
+    public void OneToManyAdd(){
+        // 创建一个客户、创建一个联系人
+        Customer customer = new Customer();
+        customer.setCustName("谷歌");
+
+        LinkMan linkMan = new LinkMan();
+        linkMan.setLkmName("谷歌客服1");
+        /*
+         * 配置了客户到联系人的关系
+         *       从客户的角度上：发送两条insert语句，发送一条update语句更新数据库(更新外键)
+         * 由于我们配置了客户到联系人的关系，客户可以对外键进行维护
+         * */
+        //customer.getLinkmans().add(linkMan);
+
+        customerDao.save(customer);
+        /*
+        * 配置了联系人到客户的关系(多对一)
+        *       只发送了两条insert语句
+        * 由于配置了联系人到客户的映射关系(多对一)
+        * */
+        linkMan.setCustomer(customer);
+        linkManDao.save(linkMan);
+    }
+
+    /**
+     * 保存一个客户，保存一个联系人(Rollback 关闭自动回滚)
+     * 实体类采用单向关联（对于客户仅用于声明，放弃维护权）
+     */
+    @Test
+    @Transactional(rollbackFor = Exception.class)
+    @Rollback(value = false)
+    public void OneToManyAdd1(){
+        // 创建一个客户、创建一个联系人
+        Customer customer = new Customer();
+        customer.setCustName("谷歌");
+
+        LinkMan linkMan = new LinkMan();
+        linkMan.setLkmName("谷歌客服1");
+        /*
+         * 配置了客户到联系人的关系
+         *       从客户的角度上：发送两条insert语句，发送一条update语句更新数据库(更新外键)
+         * 由于我们配置了客户到联系人的关系，客户可以对外键进行维护
+         * */
+        //customer.getLinkmans().add(linkMan);
+
+        customerDao.save(customer);
+        /*
+         * 配置了联系人到客户的关系(多对一)
+         *       只发送了两条insert语句
+         * 由于配置了联系人到客户的映射关系(多对一)
+         * */
+        linkMan.setCustomer(customer);
+        linkManDao.save(linkMan);
+    }
+
+    /**
+     * 删除数据：
+     *      删除主表的时候分为两种情况
+     *          1.主表有外键维护权：如果外键被占用会把从表的外键置为null
+     *          2.主表没有外键维护权：如果外键被占用会把报错，不给删除，如果需要删除就要用级联删除去完成
+     *      删除从表无特殊情况
+     */
+    @Test
+    @Transactional(rollbackFor = Exception.class)
+    @Rollback(value = false)
+    public void OneToManyDelete(){
+        // 创建一个客户、创建一个联系人
+        Customer customer = new Customer();
+        customer.setCustName("谷歌");
+
+        LinkMan linkMan = new LinkMan();
+        linkMan.setLkmName("谷歌客服1");
+        /*
+         * 配置了客户到联系人的关系
+         *       从客户的角度上：发送两条insert语句，发送一条update语句更新数据库(更新外键)
+         * 由于我们配置了客户到联系人的关系，客户可以对外键进行维护
+         * */
+        //customer.getLinkmans().add(linkMan);
+
+        customerDao.save(customer);
+        /*
+         * 配置了联系人到客户的关系(多对一)
+         *       只发送了两条insert语句
+         * 由于配置了联系人到客户的映射关系(多对一)
+         * */
+        linkMan.setCustomer(customer);
+        linkManDao.save(linkMan);
+    }
+
+    /**
+     * 级联添加：保存一个客户的同时，保存客户的所有联系人
+     *      需要在操作的主体类上,配置casacde属性
+     */
+    @Test
+    @Transactional(rollbackFor = Exception.class)
+    @Rollback(value = false)
+    public void OneToManyCascadeAdd(){
+        // 创建一个客户、创建一个联系人
+        Customer customer = new Customer();
+        customer.setCustName("谷歌2");
+
+        LinkMan linkMan = new LinkMan();
+        linkMan.setLkmName("谷歌客服2");
+
+        customer.getLinkmans().add(linkMan);
+        linkMan.setCustomer(customer);
+
+        customerDao.save(customer);
+    }
+
+    /**
+     * 级联删除：删除一个客户的同时，删除客户的所有联系人
+     */
+    @Test
+    @Transactional(rollbackFor = Exception.class)
+    @Rollback(value = false)
+    public void OneToManyCascadeDelete(){
+        // 查询id为22的客户
+        Optional<Customer> customerOptional = customerDao.findById(22L);
+        // 删除id为22的客户
+        customerDao.delete(customerOptional.get());
     }
 }
