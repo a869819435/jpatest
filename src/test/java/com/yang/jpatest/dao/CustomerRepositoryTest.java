@@ -18,6 +18,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -368,5 +369,53 @@ class CustomerRepositoryTest {
         Optional<Customer> customerOptional = customerDao.findById(22L);
         // 删除id为22的客户
         customerDao.delete(customerOptional.get());
+    }
+
+    /**
+     * 测试对象导航查询(查询一个对象的时候，通过此对象查询所有的关联对象)
+     */
+    @Test
+    // 解决could not initialize proxy错误(因为在单元测试类中进行，所有的操作不在同一事物内完成)
+    @Transactional(rollbackFor = Exception.class)
+    public void testQuery1(){
+        // 查询id为1的客户
+        Customer one = customerDao.getOne(11L);
+        // 对象导航查询，客户下的所有联系人
+        Set<LinkMan> linkManSet = one.getLinkmans();
+        linkManSet.forEach(i -> System.out.println(i.toString()));
+    }
+
+    /**
+     * 测试对象导航查询(查询一个对象的时候，通过此对象查询所有的关联对象)
+     *      默认使用延迟加载的形式查询
+     *          调用getOne方法不会立即发送查询，而是调用关联对象的时候才查询
+     *          调用findById等方法也是一样的结果
+     *      修改配置，将默认的延迟加载改为立即加载
+     *          fetch，需要配置到多表映射关系的注解上
+     */
+    @Test
+    // 解决could not initialize proxy错误(因为在单元测试类中进行，所有的操作不在同一事物内完成)
+    @Transactional(rollbackFor = Exception.class)
+    public void testQuery2(){
+        // 查询id为1的客户
+        Optional<Customer> one = customerDao.findById(11L);
+        // 对象导航查询，客户下的所有联系人
+        Set<LinkMan> linkManSet = one.get().getLinkmans();
+        System.out.println(linkManSet.size());
+    }
+
+    /**
+     * 从联系人查询客户
+     *      默认情况下，从多方查一方使用立即加载
+     *      需要延迟加载，需要配置客户对象
+     */
+    @Test
+    // 解决could not initialize proxy错误(因为在单元测试类中进行，所有的操作不在同一事物内完成)
+    @Transactional(rollbackFor = Exception.class)
+    public void testQuery3(){
+        LinkMan linkMan = linkManDao.getOne(7L);
+        // 对象导航查询所有的客户
+        Customer customer = linkMan.getCustomer();
+        System.out.println(customer.toString());
     }
 }

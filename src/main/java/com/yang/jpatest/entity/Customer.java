@@ -84,6 +84,6 @@ public class Customer implements Serializable {
 //    @OneToMany(targetEntity = LinkMan.class)  //保留外键维护权
 //    @JoinColumn(name = "lkm_cust_id",referencedColumnName = "cust_id")
     // 放弃外键维护权
-    @OneToMany(mappedBy = "customer",cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "customer",cascade = CascadeType.ALL,fetch = FetchType.LAZY)
     private Set<LinkMan> linkmans = new HashSet<LinkMan>(0);
 }
